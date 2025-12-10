@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 import sqlite3
 import os
 
+
 # -------------------------------
 # SQLite Database Setup (Requirement 6: Local Data Storage)
 # -------------------------------
