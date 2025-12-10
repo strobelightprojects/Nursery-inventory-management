@@ -1,0 +1,37 @@
+name: Python Pytest CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    # We will test on multiple versions of Python for better compatibility
+    strategy:
+      matrix:
+        python-version: ['3.9', '3.10', '3.11']
+
+    steps:
+    - name: Checkout repository code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        # Install pytest from requirements.txt
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        # Ensure sqlite3 is available (usually is, but good practice)
+
+    - name: Run Pytest Tests
+      # We tell pytest to look specifically for test.py
+      run: |
+        pytest test.py
