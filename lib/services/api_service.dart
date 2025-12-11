@@ -39,11 +39,10 @@ class ApiService {
 
   // --- 1. PLANT CRUD ENDPOINTS ---
 
-  // GET /plants
+  // GET /plants (includes optional search parameter)
   Future<List<dynamic>> fetchPlants({String? searchTerm}) async {
     String url = '$baseUrl/plants';
     if (searchTerm != null && searchTerm.isNotEmpty) {
-      // Adds the search term as a query parameter
       url += '?search=${Uri.encodeQueryComponent(searchTerm)}';
     }
     
@@ -65,6 +64,14 @@ class ApiService {
     }
   }
 
+  // PUT /plants/<id> (Update Plant Details - excluding quantity)
+  Future<void> updatePlant(int id, Map<String, dynamic> updateData) async {
+    final response = await _sendJsonRequest('$baseUrl/plants/$id', 'PUT', updateData);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update plant: ${_extractErrorMessage(response)}');
+    }
+  }
+
   // DELETE /plants/<id>
   Future<void> deletePlant(int id) async {
     final response = await _sendJsonRequest('$baseUrl/plants/$id', 'DELETE', null);
@@ -73,15 +80,6 @@ class ApiService {
     }
   }
   
-  // PUT /plants/<id> (Update Plant Details)
-  Future<void> updatePlant(int id, Map<String, dynamic> updateData) async {
-    final response = await _sendJsonRequest('$baseUrl/plants/$id', 'PUT', updateData);
-    if (response.statusCode != 200) {
-      throw Exception('Failed to update plant: ${_extractErrorMessage(response)}');
-    }
-  }
-
-
   // --- 2. SUPPLIER CRUD ENDPOINTS ---
 
   // GET /suppliers
@@ -103,7 +101,15 @@ class ApiService {
       throw Exception('Failed to add supplier: ${_extractErrorMessage(response)}');
     }
   }
-  
+
+  // PUT /suppliers/<id> (Update Existing Supplier)
+  Future<void> updateSupplier(int id, Map<String, dynamic> updateData) async {
+    final response = await _sendJsonRequest('$baseUrl/suppliers/$id', 'PUT', updateData);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update supplier: ${_extractErrorMessage(response)}');
+    }
+  }
+
   // DELETE /suppliers/<id>
   Future<void> deleteSupplier(int id) async {
     final response = await _sendJsonRequest('$baseUrl/suppliers/$id', 'DELETE', null);
@@ -150,6 +156,14 @@ class ApiService {
     } else {
       // The API returns the specific error message (e.g., "Insufficient stock") in the body.
       throw Exception('Failed to place order: ${_extractErrorMessage(response)}');
+    }
+  }
+  
+  // DELETE /orders/<id> (Cancel Order and Revert Stock)
+  Future<void> deleteOrder(int id) async {
+    final response = await _sendJsonRequest('$baseUrl/orders/$id', 'DELETE', null);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete order: ${_extractErrorMessage(response)}');
     }
   }
 }
