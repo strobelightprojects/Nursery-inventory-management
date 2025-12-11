@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../models/plant.dart'; // Make sure this model file exists and is up-to-date
 
 class PlantFormScreen extends StatefulWidget {
-  final VoidCallback onPlantAdded; // Callback to refresh the main list
+  final VoidCallback onPlantSaved; // Used for both Add and Edit completion
+  final Plant? plant; // Optional plant data for editing
 
-  const PlantFormScreen({super.key, required this.onPlantAdded});
+  const PlantFormScreen({super.key, required this.onPlantSaved, this.plant});
 
   @override
   State<PlantFormScreen> createState() => _PlantFormScreenState();
@@ -19,7 +21,34 @@ class _PlantFormScreenState extends State<PlantFormScreen> {
   final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
   final TextEditingController _quantityController = TextEditingController();
-  final TextEditingController _supplierIdController = TextEditingController(); // Simpler for now
+  final TextEditingController _supplierIdController = TextEditingController(); 
+
+  bool get isEditing => widget.plant != null;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-populate fields if in Edit Mode
+    if (isEditing) {
+      _nameController.text = widget.plant!.name;
+      _categoryController.text = widget.plant!.category;
+      _priceController.text = widget.plant!.price.toString();
+      _quantityController.text = widget.plant!.quantity.toString();
+      _supplierIdController.text = widget.plant!.supplierId?.toString() ?? '';
+    }
+    // Note: In EDIT mode, we display the quantity but don't allow editing it here.
+    // Stock changes are handled by the separate Restock function in InventoryScreen.
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _categoryController.dispose();
+    _priceController.dispose();
+    _quantityController.dispose();
+    _supplierIdController.dispose();
+    super.dispose();
+  }
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
@@ -28,38 +57,42 @@ class _PlantFormScreenState extends State<PlantFormScreen> {
           'name': _nameController.text,
           'category': _categoryController.text,
           'price': double.parse(_priceController.text),
-          'quantity': int.parse(_quantityController.text),
-          'supplier_id': int.tryParse(_supplierIdController.text), // Handle optional/nullable
-          // Other fields (cost_price, image_path, reorder_at) could be added here
+          // Quantity is only sent during POST (Add)
+          'supplier_id': int.tryParse(_supplierIdController.text),
         };
-
-        await _apiService.addPlant(plantData);
         
+        if (isEditing) {
+          // Send PUT request to update details (name, category, price, supplier_id)
+          await _apiService.updatePlant(widget.plant!.id, plantData);
+        } else {
+          // Send POST request to add a new plant. Must include quantity.
+          plantData['quantity'] = int.parse(_quantityController.text); 
+          await _apiService.addPlant(plantData);
+        }
+
         if (!mounted) return;
         
-        // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Plant added successfully!')),
+          SnackBar(content: Text('Plant ${isEditing ? "updated" : "added"} successfully!')),
         );
         
-        widget.onPlantAdded(); // Trigger the refresh callback
-        Navigator.pop(context); // Go back to the inventory list
+        widget.onPlantSaved(); 
+        Navigator.pop(context); 
         
       } catch (e) {
         if (!mounted) return;
-        // Show error message
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add plant: $e')),
+          SnackBar(content: Text('Failed to save plant: $e')),
         );
       }
     }
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add New Plant'),
+        title: Text(isEditing ? 'Edit Plant Details' : 'Add New Plant'),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
@@ -88,14 +121,20 @@ class _PlantFormScreenState extends State<PlantFormScreen> {
                 decoration: const InputDecoration(labelText: 'Price (\$)', hintText: '12.50'),
                 validator: (value) => value!.isEmpty ? 'Please enter a price' : null,
               ),
-              // Quantity Field
-              TextFormField(
-                controller: _quantityController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Quantity (Stock)'),
-                validator: (value) => value!.isEmpty ? 'Please enter a quantity' : null,
-              ),
-              // Supplier ID Field (Will be a dropdown later)
+              // Quantity Field (Only required/editable in ADD mode)
+              if (!isEditing) 
+                TextFormField(
+                  controller: _quantityController,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'Initial Quantity (Stock)'),
+                  validator: (value) => value!.isEmpty ? 'Please enter a quantity' : null,
+                )
+              else 
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
+                  child: Text('Current Stock: ${widget.plant!.quantity}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              // Supplier ID Field
               TextFormField(
                 controller: _supplierIdController,
                 keyboardType: TextInputType.number,
@@ -107,7 +146,7 @@ class _PlantFormScreenState extends State<PlantFormScreen> {
               ElevatedButton.icon(
                 onPressed: _submitForm,
                 icon: const Icon(Icons.save),
-                label: const Text('Save Plant Record'),
+                label: Text(isEditing ? 'Update Plant Details' : 'Save New Plant'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(50),
                   backgroundColor: Colors.green,
