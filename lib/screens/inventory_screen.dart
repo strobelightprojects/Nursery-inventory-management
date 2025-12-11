@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import 'plant_form_screen.dart'; // Import the new form screen
+import 'plant_form_screen.dart'; 
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -27,7 +27,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
       _error = '';
     });
     try {
-      final data = await _apiService.fetchPlants();
+      // NOTE: We can integrate a search feature here later if needed
+      final data = await _apiService.fetchPlants(); 
       setState(() {
         _plants = data;
         _isLoading = false;
@@ -61,6 +62,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: 'Add New Plant',
+            onPressed: _navigateToAddPlant, // Add button to open the form
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh Inventory',
             onPressed: _fetchPlants,
@@ -82,19 +88,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
                           'Stock: ${plant['quantity']} | Price: \$${plant['price']} | Supplier: ${plant['supplier_name'] ?? 'None'}'),
                       trailing: const Icon(Icons.edit),
                       onTap: () {
-                        // TODO: Navigate to Edit Plant Screen
+                        // TODO: Implement navigation to a details/edit screen
                       },
                     );
                   },
                 ),
-      // Floating Action Button to navigate to the Add Plant form
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToAddPlant,
-        backgroundColor: Colors.green,
-        foregroundColor: Colors.white,
-        tooltip: 'Add New Plant',
-        child: const Icon(Icons.add),
-      ),
     );
   }
 }
