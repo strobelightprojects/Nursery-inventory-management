@@ -8,15 +8,21 @@ def db_connection():
     """
     Creates an isolated, in-memory database connection and sets up the schema 
     exactly matching your current application file for each test.
+    
+    IMPORTANT: Includes 'PRAGMA foreign_keys = ON' to ensure constraints are enforced 
+    (this fixes the IntegrityError failure).
     """
     conn = sqlite3.connect(":memory:")
     cursor = conn.cursor()
+
+    # FIX: Must enable Foreign Key enforcement in SQLite for the tests to work correctly
+    cursor.execute("PRAGMA foreign_keys = ON")
 
     # 1. Create Suppliers table
     cursor.execute("""
     CREATE TABLE suppliers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE,  -- Added UNIQUE constraint for testing
+        name TEXT UNIQUE,
         contact_person TEXT,
         email TEXT,
         phone TEXT,
@@ -24,7 +30,7 @@ def db_connection():
     )
     """)
 
-    # 2. Create Products table (using your current schema: sku, cost_price, etc.)
+    # 2. Create Products table
     cursor.execute("""
     CREATE TABLE products (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -185,7 +191,7 @@ def test_prevent_duplicate_supplier_name(db_connection):
     cursor.execute("INSERT INTO suppliers (name) VALUES (?)", (supplier_name,))
     db_connection.commit()
 
-    # 2. Attempt to insert the same supplier name again (Failure)
+    # 2. Attempt to insert the same supplier name again (Failure expected)
     with pytest.raises(sqlite3.IntegrityError):
         cursor.execute("INSERT INTO suppliers (name) VALUES (?)", (supplier_name,))
         db_connection.commit()
@@ -217,7 +223,7 @@ def test_restock_with_negative_quantity_is_allowed_by_db(db_connection, sun_flow
 def test_order_creation_with_non_existent_product_fails(db_connection):
     """
     Tests the Foreign Key constraint: ensures an order item cannot be created 
-    if it links to a non-existent product.
+    if it links to a non-existent product. (This is the test that previously failed.)
     """
     cursor = db_connection.cursor()
     
