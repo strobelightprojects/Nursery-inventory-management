@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
-import 'supplier_form_screen.dart'; 
+import 'supplier_form_screen.dart'; // Import both the form and the Supplier model
+
+// NOTE: The Supplier class is defined in supplier_form_screen.dart
+// For this file to compile, ensure you have the Supplier class definition in the form screen.
 
 class SupplierListScreen extends StatefulWidget {
   const SupplierListScreen({super.key});
@@ -40,12 +43,29 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
     }
   }
 
+  // Navigate to the ADD Supplier form
   void _navigateToAddSupplier() {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => SupplierFormScreen(
-          onSupplierAdded: _fetchSuppliers, 
+          onSupplierSaved: _fetchSuppliers, // Use onSupplierSaved now
+        ),
+      ),
+    );
+  }
+  
+  // Navigate to the EDIT Supplier form
+  void _navigateToEditSupplier(Map<String, dynamic> supplierData) {
+    // Convert the map data fetched from the API into the Supplier object 
+    final supplier = Supplier.fromJson(supplierData); 
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SupplierFormScreen(
+          onSupplierSaved: _fetchSuppliers, 
+          supplier: supplier, // Pass the existing supplier data to trigger Edit Mode
         ),
       ),
     );
@@ -57,7 +77,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           title: const Text('Confirm Deletion'),
-          content: Text('Are you sure you want to delete supplier "$name"? This will fail if plants are still linked.'),
+          content: Text('Are you sure you want to delete supplier "$name"? This will fail if plants are still linked to them.'),
           actions: <Widget>[
             TextButton(
               child: const Text('Cancel'),
@@ -82,6 +102,7 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
         );
       } catch (e) {
         if (!mounted) return;
+        // The error will include the reason (e.g., "Supplier is linked to X products...")
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Deletion failed: ${e.toString()}')),
         );
@@ -115,6 +136,8 @@ class _SupplierListScreenState extends State<SupplierListScreen> {
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       child: ListTile(
+                        // Tap the ListTile to navigate to the Edit Form
+                        onTap: () => _navigateToEditSupplier(supplier), 
                         leading: CircleAvatar(
                           backgroundColor: Colors.blue,
                           child: Text(supplier['id'].toString(), style: const TextStyle(color: Colors.white)),
