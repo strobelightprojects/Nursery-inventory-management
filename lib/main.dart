@@ -1,30 +1,29 @@
 import 'package:flutter/material.dart';
-import 'screens/inventory_screen.dart'; 
-import 'screens/order_list_screen.dart'; // Import the new screen
+import 'screens/inventory_screen.dart';
+import 'screens/order_list_screen.dart';
+import 'screens/supplier_list_screen.dart';
 
 void main() {
-  runApp(const InventoryApp());
+  runApp(const MainApp());
 }
 
-class InventoryApp extends StatelessWidget {
-  const InventoryApp({super.key});
+class MainApp extends StatelessWidget {
+  const MainApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Nursery Inventory',
+      title: 'Nursery Inventory Manager',
       theme: ThemeData(
+        // Using green as the primary color aligns with a nursery theme
         primarySwatch: Colors.green,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
         useMaterial3: true,
       ),
-      // Set the home to the new MainNavigator widget
-      home: const MainNavigator(), 
+      home: const MainNavigator(),
     );
   }
 }
 
-// New Widget to handle bottom navigation
 class MainNavigator extends StatefulWidget {
   const MainNavigator({super.key});
 
@@ -35,11 +34,11 @@ class MainNavigator extends StatefulWidget {
 class _MainNavigatorState extends State<MainNavigator> {
   int _selectedIndex = 0;
 
-  // List of screens for the navigation bar
-  static const List<Widget> _screens = <Widget>[
-    InventoryScreen(), // Index 0: Plant Inventory
-    OrderListScreen(),  // Index 1: Customer Orders
-    // TODO: Add SupplierListScreen here at Index 2
+  // List of the three main screens accessible via the Bottom Navigation Bar
+  final List<Widget> _screens = <Widget>[
+    const InventoryScreen(),
+    const OrderListScreen(),
+    const SupplierListScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -51,21 +50,26 @@ class _MainNavigatorState extends State<MainNavigator> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // The current screen is displayed here
-      body: _screens.elementAt(_selectedIndex), 
-      
-      // Bottom Navigation Bar for switching views
+      // IndexedStack keeps the state of the screens alive when switching tabs.
+      // This is crucial so your lists don't reload every time you tap a tab.
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
           BottomNavigationBarItem(
-            icon: Icon(Icons.grass),
+            icon: Icon(Icons.inventory),
             label: 'Inventory',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.receipt),
+            icon: Icon(Icons.receipt_long),
             label: 'Orders',
           ),
-          // TODO: Add Suppliers Item here
+          BottomNavigationBarItem(
+            icon: Icon(Icons.business),
+            label: 'Suppliers',
+          ),
         ],
         currentIndex: _selectedIndex,
         selectedItemColor: Colors.green[800],

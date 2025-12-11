@@ -1,5 +1,9 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+// Import all necessary Model files
+import '../models/plant.dart';
+import '../models/supplier.dart';
+import '../models/order.dart';
 
 // Configuration: The address where your Python API server is running
 const String baseUrl = 'http://127.0.0.1:5000';
@@ -40,7 +44,7 @@ class ApiService {
   // --- 1. PLANT CRUD ENDPOINTS ---
 
   // GET /plants (includes optional search parameter)
-  Future<List<dynamic>> fetchPlants({String? searchTerm}) async {
+  Future<List<Plant>> fetchPlants({String? searchTerm}) async {
     String url = '$baseUrl/plants';
     if (searchTerm != null && searchTerm.isNotEmpty) {
       url += '?search=${Uri.encodeQueryComponent(searchTerm)}';
@@ -48,7 +52,9 @@ class ApiService {
     
     final response = await http.get(Uri.parse(url));
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      List jsonResponse = jsonDecode(response.body);
+      // Maps raw JSON list to List<Plant>
+      return jsonResponse.map((plantJson) => Plant.fromJson(plantJson)).toList();
     } else {
       throw Exception('Failed to load plants: ${_extractErrorMessage(response)}');
     }
@@ -83,10 +89,12 @@ class ApiService {
   // --- 2. SUPPLIER CRUD ENDPOINTS ---
 
   // GET /suppliers
-  Future<List<dynamic>> fetchSuppliers() async {
+  Future<List<Supplier>> fetchSuppliers() async {
     final response = await http.get(Uri.parse('$baseUrl/suppliers'));
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      List<dynamic> data = json.decode(response.body);
+      // Maps raw JSON list to List<Supplier>
+      return data.map((json) => Supplier.fromJson(json)).toList();
     } else {
       throw Exception('Failed to load suppliers: ${_extractErrorMessage(response)}');
     }
@@ -139,10 +147,12 @@ class ApiService {
   // --- 4. ORDER MANAGEMENT ENDPOINTS ---
 
   // GET /orders
-  Future<List<dynamic>> fetchOrders() async {
+  Future<List<Order>> fetchOrders() async {
     final response = await http.get(Uri.parse('$baseUrl/orders'));
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      List jsonResponse = jsonDecode(response.body);
+      // Maps raw JSON list to List<Order>
+      return jsonResponse.map((orderJson) => Order.fromJson(orderJson)).toList();
     } else {
       throw Exception('Failed to load orders: ${_extractErrorMessage(response)}');
     }
@@ -166,4 +176,4 @@ class ApiService {
       throw Exception('Failed to delete order: ${_extractErrorMessage(response)}');
     }
   }
-}
+} 

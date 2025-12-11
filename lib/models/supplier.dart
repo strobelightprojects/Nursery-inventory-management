@@ -18,18 +18,24 @@ class Supplier {
   // Converts JSON from the Flask API into a Dart Supplier object
   factory Supplier.fromJson(Map<String, dynamic> json) {
     return Supplier(
-      id: json['id'],
-      name: json['name'],
-      email: json['email'],
-      contactPerson: json['contact_person'],
-      phone: json['phone'],
-      address: json['address'],
+      // Ensure explicit type casting
+      id: json['id'] as int,
+      name: json['name'] as String,
+      email: json['email'] as String,
+      
+      // Use null-aware casting for optional fields
+      contactPerson: json['contact_person'] as String?,
+      phone: json['phone'] as String?,
+      address: json['address'] as String?,
     );
   }
 
   // Converts a Dart Supplier object into a JSON map for sending to the API
   Map<String, dynamic> toJson() {
     return {
+      // The ID is included here only if you need to send it for an update/delete,
+      // but is generally omitted for POST (create). Leaving it here is fine.
+      'id': id,
       'name': name,
       'email': email,
       'contact_person': contactPerson,
