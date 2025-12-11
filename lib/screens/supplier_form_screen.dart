@@ -1,10 +1,42 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 
-class SupplierFormScreen extends StatefulWidget {
-  final VoidCallback onSupplierAdded;
+// Use a simple data model for the supplier data coming from API
+class Supplier {
+  final int? id;
+  final String name;
+  final String email;
+  final String? contactPerson;
+  final String? phone;
+  final String? address;
 
-  const SupplierFormScreen({super.key, required this.onSupplierAdded});
+  Supplier({
+    this.id,
+    required this.name,
+    required this.email,
+    this.contactPerson,
+    this.phone,
+    this.address,
+  });
+  
+  // Factory to create from API response (Map<String, dynamic>)
+  factory Supplier.fromJson(Map<String, dynamic> json) {
+    return Supplier(
+      id: json['id'] as int?,
+      name: json['name'] as String,
+      email: json['email'] as String,
+      contactPerson: json['contact_person'] as String?,
+      phone: json['phone'] as String?,
+      address: json['address'] as String?,
+    );
+  }
+}
+
+class SupplierFormScreen extends StatefulWidget {
+  final VoidCallback onSupplierSaved;
+  final Supplier? supplier; // NEW: Optional supplier data for editing
+
+  const SupplierFormScreen({super.key, required this.onSupplierSaved, this.supplier});
 
   @override
   State<SupplierFormScreen> createState() => _SupplierFormScreenState();
@@ -13,13 +45,28 @@ class SupplierFormScreen extends StatefulWidget {
 class _SupplierFormScreenState extends State<SupplierFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final ApiService _apiService = ApiService();
-
-  // Controllers for required and optional fields
+  
+  // Controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _contactPersonController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _addressController = TextEditingController();
+
+  bool get isEditing => widget.supplier != null;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pre-populate fields if in Edit Mode
+    if (isEditing) {
+      _nameController.text = widget.supplier!.name;
+      _emailController.text = widget.supplier!.email;
+      _contactPersonController.text = widget.supplier!.contactPerson ?? '';
+      _phoneController.text = widget.supplier!.phone ?? '';
+      _addressController.text = widget.supplier!.address ?? '';
+    }
+  }
 
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
@@ -32,31 +79,48 @@ class _SupplierFormScreenState extends State<SupplierFormScreen> {
           'address': _addressController.text.isEmpty ? null : _addressController.text,
         };
 
-        await _apiService.addSupplier(supplierData);
+        if (isEditing) {
+          // CALL PUT ENDPOINT for Editing
+          await _apiService.updateSupplier(widget.supplier!.id!, supplierData);
+        } else {
+          // CALL POST ENDPOINT for Adding
+          await _apiService.addSupplier(supplierData);
+        }
         
         if (!mounted) return;
         
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Supplier added successfully!')),
+          SnackBar(content: Text('Supplier ${isEditing ? "updated" : "added"} successfully!')),
         );
         
-        widget.onSupplierAdded(); 
+        widget.onSupplierSaved(); 
         Navigator.pop(context); 
         
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add supplier: $e')),
+          SnackBar(content: Text('Failed to save supplier: $e')),
         );
       }
     }
   }
+  
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _contactPersonController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    super.dispose();
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add New Supplier'),
+        title: Text(isEditing ? 'Edit Supplier (${widget.supplier!.id})' : 'Add New Supplier'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
@@ -102,7 +166,7 @@ class _SupplierFormScreenState extends State<SupplierFormScreen> {
               ElevatedButton.icon(
                 onPressed: _submitForm,
                 icon: const Icon(Icons.save),
-                label: const Text('Save Supplier'),
+                label: Text(isEditing ? 'Update Supplier' : 'Save Supplier'),
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size.fromHeight(50),
                   backgroundColor: Colors.blue,
