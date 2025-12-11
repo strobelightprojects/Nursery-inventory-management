@@ -2,15 +2,43 @@ import sqlite3
 import json
 from flask import Flask, jsonify, request, g
 from datetime import datetime
+import os
+import sys # <-- NEW: Need sys and os for path discovery
 
-# --- CONFIGURATION ---
-DATABASE = 'inventory.db'
+# --- CONFIGURATION (UPDATED TO USE APPDATA) ---
+
+def get_database_path():
+    """
+    Determines the absolute, writable path for the database file.
+    It uses the user's AppData (Roaming) directory for standard write permissions.
+    """
+    
+    # 1. Determine the Base Directory
+    if getattr(sys, 'frozen', False):
+        # Running as a PyInstaller executable
+        # Use APPDATA environment variable (e.g., C:\Users\User\AppData\Roaming)
+        base_dir = os.path.join(os.getenv('APPDATA'), 'NurseryInventoryManager')
+    else:
+        # Running as a development script (use the script's directory)
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+    
+    # 2. Ensure the directory exists (it will be created if the application runs first)
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+        
+    # 3. Construct the full absolute path to the database file
+    return os.path.join(base_dir, 'inventory.db')
+
+# Assign the absolute, determined path to the global DATABASE variable
+DATABASE = get_database_path() # <-- UPDATED: Now calls the function
+
 app = Flask(__name__)
 
 # --- DATABASE CONNECTION UTILITIES ---
 
 def get_db_connection():
     """Returns a new SQLite database connection with row factory for dictionary access."""
+    # NOTE: DATABASE variable now contains the full AppData path, fixing the read-only error
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
     return conn
@@ -301,7 +329,7 @@ def delete_supplier(supplier_id):
     cursor = conn.cursor()
     
     try:
-        with conn:
+        with conn: # <--- Transaction handles commit/rollback
             # Check for linked products (crucial for foreign key integrity)
             linked_products = cursor.execute("SELECT COUNT(*) FROM products WHERE supplier_id=?", (supplier_id,)).fetchone()[0]
             if linked_products > 0:
